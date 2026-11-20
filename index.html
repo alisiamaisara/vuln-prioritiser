@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vuln Scanner &amp; Prioritiser – Interface Prototype</title>
+<meta name="description" content="Clickable interface prototype for an ML-based web and API vulnerability prioritisation and remediation platform (FYP, UNITEN).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F6F9FC;font-family:'Poppins',system-ui,sans-serif;color:#24345C;font-size:16px;line-height:1.5}
+button{font-family:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #C93F80;outline-offset:2px}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 48px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #C9D9EA;border-radius:14px;padding:18px}
+.muted{color:#4A5878}
+.small{font-size:14px}
+.btn{border-radius:10px;padding:10px 16px;min-height:44px;font-weight:600;font-size:15px;cursor:pointer;border:1px solid #24345C;background:#fff;color:#24345C}
+.btn-dark{background:#24345C;color:#fff;border:none}
+.btn-pink{background:#C93F80;color:#fff;border:none}
+.btn[disabled]{background:#D5DCE6;color:#5B6B87;border-color:#D5DCE6;cursor:not-allowed}
+.chip{border-radius:20px;padding:4px 12px;font-size:14px}
+.pill{border-radius:8px;padding:4px 10px;font-size:14px}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.grid-auto-lg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.between{justify-content:space-between}
+label.opt{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px}
+input[type=radio],input[type=checkbox]{width:20px;height:20px;accent-color:#C93F80}
+.finding{width:100%;text-align:left;background:#fff;border:1px solid #C9D9EA;border-radius:14px;padding:14px 16px;cursor:pointer;color:#24345C;display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;font-size:15px}
+.finding:hover{border-color:#24345C}
+pre{margin:0;background:#1E2433;color:#E8EEF7;border-radius:10px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.6;overflow-x:auto;white-space:pre}
+table{width:100%;min-width:760px;border-collapse:collapse;font-size:14px}
+th{padding:12px 14px;text-align:left;background:#E3DAF5}
+td{padding:10px 14px;border-top:1px solid #D5E3F0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#24345C;color:#fff;padding:12px 20px;border-radius:12px;font-size:15px;box-shadow:0 8px 24px rgba(36,52,92,.3);max-width:90vw;text-align:center}
+</style>
+</head>
+<body>
+<div style="background:#C93F80;color:#fff;text-align:center;font-size:14px;font-weight:500;padding:8px 16px">Interface prototype (FYP1) · all values are sample data for illustration</div>
+<header style="background:#DCEEFB;border-bottom:2px solid #24345C">
+  <div style="max-width:1080px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+    <button data-go="new" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer;color:#24345C">
+      <svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="#FBD3E4" stroke="#24345C" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><circle cx="11" cy="11" r="3.2" fill="#fff"/><path d="M13.4 13.4L16 16" stroke-linecap="round"/></svg>
+      <span style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px">Vuln Scanner &amp; Prioritiser</span>
+    </button>
+    <nav aria-label="Main" id="nav" style="display:flex;flex-wrap:wrap;gap:6px"></nav>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+var FINDINGS = [
+  { title: 'SQL injection', cwe: 'CWE-89', loc: '/vulnerabilities/sqli/?id=', p: 0.31, impact: 5.9,
+    fullUrl: 'http://dvwa.local/vulnerabilities/sqli/?id=1%27&Submit=Submit', param: 'id',
+    evidence: 'Database error message returned in the response ("You have an error in your SQL syntax")',
+    reasons: [['+', 'injection-type weakness', 0.92], ['+', 'network attack vector', 0.64], ['+', 'no privileges required', 0.48]],
+    steps: ['Use parameterised queries (prepared statements) for every database call.', 'Never build SQL by joining strings with user input.', 'Turn off detailed database errors in production.'],
+    code: {
+      'Flask': '# Flask + MySQL (PyMySQL)\nuser_id = request.args.get("id", "")\ncur.execute("SELECT first_name, last_name FROM users WHERE user_id = %s", (user_id,))\nrows = cur.fetchall()',
+      'PHP': '// PHP + PDO\n$stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE user_id = ?");\n$stmt->execute([$_GET["id"]]);\n$rows = $stmt->fetchAll();',
+      'Node.js': '// Node.js + mysql2\nconst [rows] = await db.execute(\n  "SELECT first_name, last_name FROM users WHERE user_id = ?",\n  [req.query.id]\n);' },
+    verify: 'Re-scan the target and confirm the SQL injection alert is gone.', refs: 'OWASP SQL Injection Prevention Cheat Sheet, CWE-89' },
+  { title: 'Reflected XSS', cwe: 'CWE-79', loc: '/vulnerabilities/xss_r/?name=', p: 0.12, impact: 2.7,
+    fullUrl: 'http://dvwa.local/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscript%3E', param: 'name',
+    evidence: 'Injected <script> payload reflected unescaped in the HTML response',
+    reasons: [['+', 'no privileges required', 0.70], ['+', 'network attack vector', 0.52], ['−', 'user interaction needed', 0.38]],
+    steps: ['Escape all user input before writing it into HTML.', 'Prefer templates that auto-escape output.', 'Add a Content-Security-Policy as a second layer of defence.'],
+    code: {
+      'Flask': '# Flask: Jinja2 templates auto-escape by default\n@app.route("/hello")\ndef hello():\n    name = request.args.get("name", "")\n    return render_template("hello.html", name=name)  # {{ name }} is escaped',
+      'PHP': '// PHP\n$name = $_GET["name"] ?? "";\necho "Hello " . htmlspecialchars($name, ENT_QUOTES, "UTF-8");',
+      'Node.js': '// Node.js + Express with an auto-escaping view engine (EJS <%= %>)\napp.get("/hello", (req, res) => {\n  res.render("hello", { name: req.query.name || "" });\n});' },
+    verify: 'Re-scan and confirm the payload is shown as text, not executed.', refs: 'OWASP XSS Prevention Cheat Sheet, CWE-79' },
+  { title: 'Backup file exposed', cwe: 'CWE-530', loc: '/config/config.inc.php.bak', p: 0.05, impact: 3.6,
+    fullUrl: 'http://dvwa.local/config/config.inc.php.bak', param: '–',
+    evidence: 'HTTP 200 response containing database connection settings',
+    reasons: [['+', 'exposes configuration secrets', 0.66], ['+', 'no privileges required', 0.41], ['−', 'low historical exploitation', 0.22]],
+    steps: ['Delete backup and temporary files from the web root.', 'Block access to backup file extensions on the server.', 'Rotate any credentials that were exposed.'],
+    code: {
+      'Flask': '# Flask: serve only a dedicated static folder, never the project root\napp = Flask(__name__, static_folder="static")\n# and remove *.bak / *.old files from deployments',
+      'PHP': '# Apache (.htaccess) for a PHP site\n<FilesMatch "\\.(bak|old|swp|orig)$">\n    Require all denied\n</FilesMatch>',
+      'Node.js': '// Node.js + Express: serve one public folder only\napp.use(express.static("public", { dotfiles: "deny" }));' },
+    verify: 'Request the file again and confirm a 403 or 404 response.', refs: 'OWASP WSTG-CONF-04, CWE-530' },
+  { title: 'Directory listing enabled', cwe: 'CWE-548', loc: '/dvwa/includes/', p: 0.02, impact: 1.4,
+    fullUrl: 'http://dvwa.local/dvwa/includes/', param: '–',
+    evidence: 'Response shows an "Index of /dvwa/includes" page',
+    reasons: [['+', 'information disclosure', 0.40], ['+', 'no privileges required', 0.31], ['−', 'low impact on its own', 0.35]],
+    steps: ['Turn off automatic directory indexes on the web server.', 'Add an index page or deny access to folders that should not be browsed.'],
+    code: {
+      'Flask': '# Flask does not list directories by default.\n# Do not add autoindex extensions in production.',
+      'PHP': '# Apache (.htaccess)\nOptions -Indexes',
+      'Node.js': '// Node.js + Express: do not mount serve-index in production\n// app.use("/files", serveIndex("files"));  <- remove' },
+    verify: 'Open the folder URL and confirm a 403 instead of a file list.', refs: 'OWASP WSTG-CONF-04, CWE-548' },
+  { title: 'CSP header not set', cwe: 'CWE-693', loc: '/ (all pages)', p: 0.006, impact: 2.7,
+    fullUrl: 'http://dvwa.local/', param: '–',
+    evidence: 'No Content-Security-Policy header in the response',
+    reasons: [['−', 'configuration weakness', 0.45], ['−', 'low historical exploitation', 0.40], ['+', 'affects every page', 0.20]],
+    steps: ['Send a Content-Security-Policy header on every response.', 'Start strict (default-src \'self\') and allow only what the app needs.'],
+    code: {
+      'Flask': '@app.after_request\ndef set_csp(resp):\n    resp.headers["Content-Security-Policy"] = "default-src \'self\'"\n    return resp',
+      'PHP': 'header("Content-Security-Policy: default-src \'self\'");',
+      'Node.js': '// Node.js + Express\nconst helmet = require("helmet");\napp.use(helmet.contentSecurityPolicy({ directives: { defaultSrc: ["\'self\'"] } }));' },
+    verify: 'Re-scan and check the header appears on every page.', refs: 'OWASP Secure Headers Project, CWE-693' },
+  { title: 'Missing anti-clickjacking header', cwe: 'CWE-1021', loc: '/ (all pages)', p: 0.004, impact: 2.7,
+    fullUrl: 'http://dvwa.local/', param: '–',
+    evidence: 'No X-Frame-Options or frame-ancestors directive',
+    reasons: [['−', 'user interaction needed', 0.42], ['−', 'low historical exploitation', 0.38], ['+', 'affects every page', 0.18]],
+    steps: ['Send X-Frame-Options: DENY, or CSP frame-ancestors \'none\'.'],
+    code: {
+      'Flask': '@app.after_request\ndef no_frames(resp):\n    resp.headers["X-Frame-Options"] = "DENY"\n    return resp',
+      'PHP': 'header("X-Frame-Options: DENY");',
+      'Node.js': 'app.use(helmet.frameguard({ action: "deny" }));' },
+    verify: 'Re-scan and confirm the header is present.', refs: 'OWASP Clickjacking Defense Cheat Sheet, CWE-1021' },
+  { title: 'Server version disclosed', cwe: 'CWE-200', loc: 'Server / X-Powered-By headers', p: 0.002, impact: 1.4,
+    fullUrl: 'http://dvwa.local/', param: '–',
+    evidence: 'Response headers reveal the web server and PHP version',
+    reasons: [['−', 'information only', 0.50], ['−', 'low historical exploitation', 0.36], ['+', 'no privileges required', 0.12]],
+    steps: ['Hide version details in response headers.'],
+    code: {
+      'Flask': '# Run behind a reverse proxy that hides the Server header\n# e.g. nginx: server_tokens off;',
+      'PHP': '; php.ini\nexpose_php = Off\n# Apache: ServerTokens Prod',
+      'Node.js': 'app.disable("x-powered-by");' },
+    verify: 'Check the response headers no longer show versions.', refs: 'OWASP WSTG-INFO-02, CWE-200' }
+];
+
+var BAND = {
+  High: { bg: '#FBD3E4', fg: '#7A1D4A' },
+  Medium: { bg: '#FFF1A8', fg: '#5C4600' },
+  Low: { bg: '#C8F0DC', fg: '#1F5E3E' }
+};
+var STEP_LABELS = ['Starting isolated Docker container', 'Running focused ZAP scan (4 checks)', 'Extracting features (NVD / KEV)', 'Scoring with the ML model and SHAP'];
+var HISTORY = [
+  { when: '20/11/2026 09:12', target: 'http://dvwa.local/', status: 'Completed', count: '7', band: 'High', done: true },
+  { when: '19/11/2026 16:40', target: 'http://juice-shop.local/api', status: 'Completed', count: '5', band: 'Medium', done: true },
+  { when: '18/11/2026 11:05', target: 'http://target-c.local/', status: 'Failed', count: '–', band: '–', failed: true },
+  { when: '20/11/2026 09:30', target: 'http://dvwa.local/', status: 'Running…', count: '–', band: '–' }
+];
+
+
+function bandOf(p){return p>=0.10?'High':(p>=0.01?'Medium':'Low');}
+function fmtP(p){return p<0.01?p.toFixed(3):p.toFixed(2);}
+function fmtRisk(r){return r<0.1?r.toFixed(3):r.toFixed(2);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+var S={screen:'new',url:'http://dvwa.local/',depth:'standard',pdf:true,auth:false,step:0,sel:0,fw:'Flask'};
+var timer=null,toastTimer=null;
+var app=document.getElementById('app'),nav=document.getElementById('nav'),toastEl=document.getElementById('toast');
+
+function set(p){for(var k in p)S[k]=p[k];render();}
+function go(screen){if(timer){clearInterval(timer);timer=null;}set({screen:screen});window.scrollTo(0,0);}
+function flash(t){toastEl.textContent=t;toastEl.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.hidden=true;},2600);}
+
+function renderNav(){
+  var items=[['new','New Scan'],['history','History'],['about','About']];
+  nav.innerHTML=items.map(function(it){
+    var on=S.screen===it[0]||(it[0]==='new'&&S.screen==='running');
+    return '<button data-go="'+it[0]+'" style="background:'+(on?'#24345C':'transparent')+';color:'+(on?'#fff':'#24345C')+';border:1px solid '+(on?'#24345C':'transparent')+';border-radius:8px;padding:8px 14px;min-height:44px;font-size:15px;font-weight:600;cursor:pointer"'+(on?' aria-current="page"':'')+'>'+it[1]+'</button>';
+  }).join('');
+}
+
+function viewNew(){
+  return '<section class="stack" aria-labelledby="h-new"><h1 id="h-new" class="h1">Start a new scan</h1>'+
+  '<div class="card"><label for="target" style="display:block;font-weight:600;margin-bottom:8px">Target URL <span class="muted" style="font-weight:400">(web application or REST API base URL)</span></label>'+
+  '<input id="target" type="url" value="'+esc(S.url)+'" class="mono" style="width:100%;font-size:16px;padding:12px 14px;border:2px solid #24345C;border-radius:10px;color:#24345C"></div>'+
+  '<fieldset class="card" style="margin:0;display:flex;flex-wrap:wrap;gap:14px 32px;align-items:center"><legend style="font-weight:600;padding:0 6px">Options</legend>'+
+  '<div class="row" style="gap:16px"><span>Scan depth:</span>'+
+  '<label class="opt"><input type="radio" name="depth" value="quick"'+(S.depth==='quick'?' checked':'')+'>Quick</label>'+
+  '<label class="opt"><input type="radio" name="depth" value="standard"'+(S.depth==='standard'?' checked':'')+'>Standard</label></div>'+
+  '<label class="opt"><input type="checkbox" id="pdf"'+(S.pdf?' checked':'')+'>Generate PDF report</label></fieldset>'+
+  '<div style="background:#FBD3E4;border:2px dashed #C93F80;border-radius:14px;padding:16px 18px"><div style="font-weight:700;margin-bottom:4px">Authorisation</div>'+
+  '<label class="opt" style="align-items:flex-start;gap:10px"><input type="checkbox" id="auth"'+(S.auth?' checked':'')+' style="width:22px;height:22px;margin-top:2px;flex:none">I confirm I own this target or have written permission to test it.</label></div>'+
+  '<div class="row" style="gap:14px"><button id="start" class="btn btn-pink" style="font-size:17px;font-weight:700;padding:12px 26px;min-height:48px"'+(S.auth?'':' disabled')+'>Start scan</button>'+
+  '<div style="flex:1 1 320px;background:#FFF1A8;border:1px solid #D9B600;border-radius:10px;padding:10px 14px;font-size:14px">Checks are applied automatically (focused ZAP policy: <b>security headers, sensitive files, reflected XSS, error-based SQLi</b>). The scan runs in an isolated Docker container.</div></div>'+
+  (S.auth?'':'<p role="status" class="small" style="margin:0;color:#A8326B">Tick the authorisation box to enable the scan.</p>')+
+  '</section>';
+}
+
+function viewRunning(){
+  var pct=Math.round(S.step/STEP_LABELS.length*100);
+  var steps=STEP_LABELS.map(function(l,i){
+    var done=i<S.step,act=i===S.step;
+    var dot=done?'background:#C8F0DC;color:#1F5E3E;border:2px solid #1F5E3E':(act?'background:#FBD3E4;color:#7A1D4A;border:2px solid #C93F80':'background:#F1F5FA;color:#4A5878;border:2px solid #C9D9EA');
+    return '<li style="display:flex;align-items:center;gap:12px"><span style="flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;'+dot+'">'+(done?'✓':(i+1))+'</span><span style="'+(act?'font-weight:700':(done?'color:#1F5E3E':'color:#4A5878'))+'">'+l+'</span></li>';
+  }).join('');
+  return '<section class="stack" aria-labelledby="h-run"><h1 id="h-run" class="h1">Scanning <span class="mono" style="font-size:20px;font-weight:500">'+esc(S.url)+'</span></h1>'+
+  '<div class="card stack" style="gap:14px"><div role="progressbar" aria-label="Scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'" style="height:14px;background:#E6EEF7;border-radius:7px;overflow:hidden"><div style="height:14px;width:'+pct+'%;background:#C93F80;border-radius:7px;transition:width .4s ease"></div></div>'+
+  '<ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px">'+steps+'</ol></div>'+
+  '<p class="small muted" style="margin:0;font-style:italic">Prototype: this screen simulates the pipeline. In FYP2 it will show the live status from the Docker container.</p></section>';
+}
+
+function F(i){var f=FINDINGS[i],band=bandOf(f.p),b=BAND[band];return {f:f,band:band,b:b,risk:f.p*f.impact};}
+
+function viewResults(){
+  var rows=FINDINGS.map(function(f,i){
+    var x=F(i);
+    return '<li><button class="finding" data-open="'+i+'">'+
+    '<span style="flex:none;width:40px;height:40px;border-radius:50%;background:'+x.b.bg+';color:'+x.b.fg+';border:2px solid '+x.b.fg+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">'+(i+1)+'</span>'+
+    '<span style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column"><span style="font-weight:700;font-size:17px">'+esc(f.title)+' <span class="muted" style="font-weight:500">('+f.cwe+')</span></span>'+
+    '<span class="mono muted" style="font-size:13px;overflow-wrap:anywhere">'+esc(f.loc)+'</span>'+
+    '<span class="muted" style="font-size:13px;margin-top:2px">'+esc(f.reasons.map(function(r){return r[0]+' '+r[1];}).join('  ·  '))+'</span></span>'+
+    '<span class="row" style="gap:8px"><span class="pill" style="background:'+x.b.bg+';color:'+x.b.fg+';font-weight:700">P = '+fmtP(f.p)+' · '+x.band+'</span>'+
+    '<span class="pill" style="background:#F1F5FA">CVSS impact <b>'+f.impact.toFixed(1)+'</b></span>'+
+    '<span class="pill" style="background:#E3DAF5">Risk <b>'+fmtRisk(x.risk)+'</b></span></span></button></li>';
+  }).join('');
+  return '<section class="stack" aria-labelledby="h-res"><div class="row between"><h1 id="h-res" class="h1 row" style="gap:10px">Results <span class="mono" style="font-size:18px;font-weight:500;background:#fff;border:1px solid #C9D9EA;padding:2px 10px;border-radius:8px">'+esc(S.url)+'</span></h1>'+
+  '<button class="btn btn-dark" data-act="pdf">Download PDF</button></div>'+
+  '<div class="row" style="gap:8px"><span class="chip" style="background:#fff;border:1px solid #C9D9EA"><b>7</b> findings</span><span class="chip" style="background:#FBD3E4;color:#7A1D4A;font-weight:600">High · 2</span><span class="chip" style="background:#FFF1A8;color:#5C4600;font-weight:600">Medium · 2</span><span class="chip" style="background:#C8F0DC;color:#1F5E3E;font-weight:600">Low · 3</span><span class="chip" style="background:#fff;border:1px solid #C9D9EA">Scan time 3 min 12 s</span></div>'+
+  '<p class="small muted" style="margin:0">Sorted by <b>risk = P(exploited) × CVSS impact</b>. Likelihood: <b>Low</b> &lt; 1% · <b>Medium</b> 1–10% · <b>High</b> ≥ 10%, the estimated chance that a weakness like this is known to be exploited in the wild. Select a finding for details.</p>'+
+  '<ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px">'+rows+'</ol></section>';
+}
+
+function viewDetail(){
+  var x=F(S.sel),f=x.f,n=FINDINGS.length;
+  var impactWord=f.impact>=3.6?'High':(f.impact>=2?'Medium':'Low');
+  var reasons=f.reasons.map(function(r){return '<li style="display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px;align-items:center;font-size:14px"><span><b>'+r[0]+'</b> '+esc(r[1])+'</span><span style="height:14px;background:#F1F5FA;border-radius:4px;overflow:hidden"><span style="display:block;height:14px;width:'+Math.round(r[2]*100)+'%;background:'+(r[0]==='+'?'#E07AA8':'#7FA9D6')+'"></span></span></li>';}).join('');
+  var steps=f.steps.map(function(t){return '<li>'+esc(t)+'</li>';}).join('');
+  var tabs=['Flask','PHP','Node.js'].map(function(t){var on=S.fw===t;return '<button role="tab" aria-selected="'+on+'" data-fw="'+t+'" class="btn" style="border-width:2px;background:'+(on?'#DCEEFB':'#fff')+'">'+t+'</button>';}).join('');
+  return '<section class="stack" aria-labelledby="h-det"><div class="row between" style="gap:8px"><button class="btn" data-go="results">← Back to results</button>'+
+  '<div class="row" style="gap:8px"><button class="btn" data-act="prev"'+(S.sel===0?' disabled':'')+'>‹ Prev</button><button class="btn" data-act="next"'+(S.sel===n-1?' disabled':'')+'>Next ›</button></div></div>'+
+  '<h1 id="h-det" class="h1" style="font-size:26px">Finding #'+(S.sel+1)+' of '+n+' · '+esc(f.title)+' ('+f.cwe+')</h1>'+
+  '<div class="grid-auto"><div style="background:#C8F0DC;border-radius:14px;padding:16px"><div class="small">Exploit likelihood</div><div style="font-size:24px;font-weight:700">P(exploited) = '+fmtP(f.p)+'</div><div style="font-weight:600">'+x.band+' likelihood</div></div>'+
+  '<div style="background:#FFF1A8;border-radius:14px;padding:16px"><div class="small">CVSS impact sub-score (0–6)</div><div style="font-size:24px;font-weight:700">'+f.impact.toFixed(1)+'</div><div style="font-weight:600">'+impactWord+' impact</div></div>'+
+  '<div style="background:#E3DAF5;border-radius:14px;padding:16px"><div class="small">Risk score</div><div style="font-size:24px;font-weight:700">'+fmtRisk(x.risk)+'</div><div style="font-weight:600">Rank '+(S.sel+1)+' of '+n+'</div></div></div>'+
+  '<p class="muted" style="margin:-4px 0 0;font-size:13px;font-style:italic">Risk = P(exploited) × CVSS impact. Likelihood words: Low &lt; 1% · Medium 1–10% · High ≥ 10%.</p>'+
+  '<div class="grid-auto-lg"><div class="card" style="padding:16px"><h2 style="margin:0 0 10px;font-size:17px">Where it was found</h2><dl style="margin:0;display:grid;grid-template-columns:100px minmax(0,1fr);gap:6px 10px;font-size:14px">'+
+  '<dt class="muted">URL</dt><dd class="mono" style="margin:0;overflow-wrap:anywhere">'+esc(f.fullUrl)+'</dd><dt class="muted">Parameter</dt><dd class="mono" style="margin:0">'+esc(f.param)+'</dd><dt class="muted">Evidence</dt><dd style="margin:0">'+esc(f.evidence)+'</dd></dl></div>'+
+  '<div class="card" style="padding:16px"><h2 style="margin:0 0 10px;font-size:17px">Why it is ranked here <span class="muted" style="font-weight:500">(top 3 SHAP reasons)</span></h2><ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px">'+reasons+'</ul><p class="muted" style="margin:10px 0 0;font-size:13px"><b>+</b> raises the score (pink) · <b>−</b> lowers it (blue)</p></div></div>'+
+  '<div class="card stack" style="padding:16px;gap:12px"><h2 style="margin:0;font-size:17px">How to fix <span class="muted" style="font-weight:500">(from the fix library)</span></h2><ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px">'+steps+'</ol>'+
+  '<div role="tablist" aria-label="Framework" class="row" style="gap:8px">'+tabs+'</div><pre>'+esc(f.code[S.fw])+'</pre>'+
+  '<div class="row small" style="gap:8px 28px"><span><b>Verify:</b> '+esc(f.verify)+'</span><span class="muted"><b>References:</b> '+esc(f.refs)+'</span></div></div></section>';
+}
+
+function viewHistory(){
+  var rows=HISTORY.map(function(h,i){
+    var b=BAND[h.band];
+    var act=h.done?'<span class="row" style="gap:8px"><button class="btn" style="padding:6px 14px;min-height:40px" data-view="'+i+'">View</button><button class="btn" style="padding:6px 14px;min-height:40px" data-act="pdf">PDF</button></span>':(h.failed?'<button data-act="err" style="background:none;border:none;color:#A8326B;text-decoration:underline;cursor:pointer;padding:6px 0;min-height:40px;font-size:14px">View error</button>':'');
+    return '<tr><td style="white-space:nowrap">'+h.when+'</td><td class="mono" style="font-size:13px">'+esc(h.target)+'</td><td style="font-weight:600;color:'+(h.failed?'#A8326B':(h.done?'#1F5E3E':'#4A5878'))+'">'+h.status+'</td><td style="text-align:right">'+h.count+'</td><td>'+(b?'<span style="background:'+b.bg+';color:'+b.fg+';border-radius:8px;padding:3px 12px;font-weight:700">'+h.band+'</span>':'<span class="muted">–</span>')+'</td><td style="padding:6px 14px">'+act+'</td></tr>';
+  }).join('');
+  return '<section class="stack" style="gap:14px" aria-labelledby="h-his"><h1 id="h-his" class="h1">Scan history</h1><p class="small muted" style="margin:0">Past scans are stored in the local database. Sample entries shown.</p>'+
+  '<div style="overflow-x:auto;background:#fff;border:1px solid #C9D9EA;border-radius:14px"><table><thead><tr><th scope="col">Date / time</th><th scope="col">Target URL</th><th scope="col">Status</th><th scope="col" style="text-align:right">Findings</th><th scope="col">Highest risk</th><th scope="col">Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+  '<p class="small" style="margin:0;background:#FFF1A8;border:1px solid #D9B600;border-radius:10px;padding:10px 14px;align-self:flex-start">Selecting <b>View</b> opens the Ranked Results page for that scan.</p></section>';
+}
+
+function viewAbout(){
+  return '<section class="stack" style="gap:14px;max-width:760px" aria-labelledby="h-abt"><h1 id="h-abt" class="h1">About this tool</h1>'+
+  '<p style="margin:0">An <b>automated web &amp; API vulnerability prioritisation and remediation platform</b>. It runs <b>OWASP ZAP</b> in an isolated <b>Docker</b> container, then ranks every finding by how likely it is to be exploited, not just by its CVSS severity.</p>'+
+  '<div class="grid-auto"><div style="background:#DCEEFB;border-radius:14px;padding:14px"><b>1 · Scan</b><br><span class="small">ZAP checks security headers, sensitive files, reflected XSS and error-based SQLi.</span></div><div style="background:#FFF1A8;border-radius:14px;padding:14px"><b>2 · Rank</b><br><span class="small">An ML model trained on NVD features and CISA KEV labels estimates P(exploited).</span></div><div style="background:#FBD3E4;border-radius:14px;padding:14px"><b>3 · Explain &amp; fix</b><br><span class="small">SHAP shows the top reasons; the fix library gives code-level remediation and a PDF report.</span></div></div>'+
+  '<p class="small muted" style="margin:0">Final Year Project · Alisia Maisara Binti Alias (CS01085211) · Supervisor: Assoc. Prof. Dr. Abdul Samad Bin Shibghatullah · Bachelor of Computer Science (Cyber Security) (Honours), Universiti Tenaga Nasional. This page is a clickable prototype with sample data; the working system is built in FYP2.</p>'+
+  '<button class="btn btn-pink" data-go="new" style="align-self:flex-start;font-weight:700;font-size:16px;padding:12px 22px">Try a sample scan</button></section>';
+}
+
+function render(){
+  renderNav();
+  var v={new:viewNew,running:viewRunning,results:viewResults,detail:viewDetail,history:viewHistory,about:viewAbout}[S.screen];
+  app.innerHTML=v();
+}
+
+function startScan(){
+  if(!S.auth)return;
+  if(timer)clearInterval(timer);
+  set({screen:'running',step:0});
+  timer=setInterval(function(){
+    var n=S.step+1;
+    if(n>=STEP_LABELS.length){clearInterval(timer);timer=null;set({step:n});setTimeout(function(){set({screen:'results',step:0});},500);}
+    else set({step:n});
+  },900);
+}
+
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button');if(!t)return;
+  if(t.dataset.go){go(t.dataset.go);return;}
+  if(t.dataset.open){set({screen:'detail',sel:+t.dataset.open,fw:'Flask'});window.scrollTo(0,0);return;}
+  if(t.dataset.fw){set({fw:t.dataset.fw});return;}
+  if(t.dataset.view){var h=HISTORY[+t.dataset.view];set({screen:'results',url:h.target});return;}
+  if(t.id==='start'){startScan();return;}
+  var a=t.dataset.act;
+  if(a==='pdf')flash('Prototype: in the full system this downloads the PDF report.');
+  else if(a==='err')flash('Sample error: target unreachable (connection timed out).');
+  else if(a==='prev'&&S.sel>0)set({sel:S.sel-1,fw:'Flask'});
+  else if(a==='next'&&S.sel<FINDINGS.length-1)set({sel:S.sel+1,fw:'Flask'});
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.id==='auth')set({auth:t.checked});
+  else if(t.id==='pdf')S.pdf=t.checked;
+  else if(t.name==='depth')S.depth=t.value;
+});
+document.addEventListener('input',function(e){if(e.target.id==='target')S.url=e.target.value;});
+render();
+</script>
+</body>
+</html>
